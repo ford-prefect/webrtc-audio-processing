@@ -12,10 +12,10 @@
 #define WEBRTC_MODULES_AUDIO_PROCESSING_SPLITTING_FILTER_H_
 
 #include <cstring>
+#include <memory>
 #include <vector>
 
 #include "webrtc/modules/audio_processing/three_band_filter_bank.h"
-#include "webrtc/system_wrappers/include/scoped_vector.h"
 
 namespace webrtc {
 
@@ -45,7 +45,8 @@ struct TwoBandsStates {
 // used.
 class SplittingFilter {
  public:
-  SplittingFilter(int num_channels, size_t num_bands, size_t num_frames);
+  SplittingFilter(size_t num_channels, size_t num_bands, size_t num_frames);
+  ~SplittingFilter();
 
   void Analysis(const IFChannelBuffer* data, IFChannelBuffer* bands);
   void Synthesis(const IFChannelBuffer* bands, IFChannelBuffer* data);
@@ -60,7 +61,7 @@ class SplittingFilter {
 
   const size_t num_bands_;
   std::vector<TwoBandsStates> two_bands_states_;
-  ScopedVector<ThreeBandFilterBank> three_band_filter_banks_;
+  std::vector<std::unique_ptr<ThreeBandFilterBank>> three_band_filter_banks_;
 };
 
 }  // namespace webrtc

@@ -24,7 +24,8 @@ libcommon_audio_la_SOURCES = resampler/include/push_resampler.h \
 			     signal_processing/copy_set_operations.c \
 			     signal_processing/cross_correlation.c \
 			     signal_processing/division_operations.c \
-			     signal_processing/dot_product_with_scale.c \
+			     signal_processing/dot_product_with_scale.cc \
+			     signal_processing/dot_product_with_scale.h \
 			     signal_processing/downsample_fast.c \
 			     signal_processing/energy.c \
 			     signal_processing/filter_ar.c \

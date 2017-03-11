@@ -23,7 +23,7 @@ const float kMaxDotProduct = 1e-6f;
 }  // namespace
 
 float GetMinimumSpacing(const std::vector<Point>& array_geometry) {
-  RTC_CHECK_GT(array_geometry.size(), 1u);
+  RTC_CHECK_GT(array_geometry.size(), 1);
   float mic_spacing = std::numeric_limits<float>::max();
   for (size_t i = 0; i < (array_geometry.size() - 1); ++i) {
     for (size_t j = i + 1; j < array_geometry.size(); ++j) {
@@ -56,23 +56,24 @@ bool ArePerpendicular(const Point& a, const Point& b) {
   return std::abs(DotProduct(a, b)) < kMaxDotProduct;
 }
 
-rtc::Maybe<Point> GetDirectionIfLinear(
+rtc::Optional<Point> GetDirectionIfLinear(
     const std::vector<Point>& array_geometry) {
-  RTC_DCHECK_GT(array_geometry.size(), 1u);
+  RTC_DCHECK_GT(array_geometry.size(), 1);
   const Point first_pair_direction =
       PairDirection(array_geometry[0], array_geometry[1]);
   for (size_t i = 2u; i < array_geometry.size(); ++i) {
     const Point pair_direction =
         PairDirection(array_geometry[i - 1], array_geometry[i]);
     if (!AreParallel(first_pair_direction, pair_direction)) {
-      return rtc::Maybe<Point>();
+      return rtc::Optional<Point>();
     }
   }
-  return rtc::Maybe<Point>(first_pair_direction);
+  return rtc::Optional<Point>(first_pair_direction);
 }
 
-rtc::Maybe<Point> GetNormalIfPlanar(const std::vector<Point>& array_geometry) {
-  RTC_DCHECK_GT(array_geometry.size(), 1u);
+rtc::Optional<Point> GetNormalIfPlanar(
+    const std::vector<Point>& array_geometry) {
+  RTC_DCHECK_GT(array_geometry.size(), 1);
   const Point first_pair_direction =
       PairDirection(array_geometry[0], array_geometry[1]);
   Point pair_direction(0.f, 0.f, 0.f);
@@ -85,30 +86,30 @@ rtc::Maybe<Point> GetNormalIfPlanar(const std::vector<Point>& array_geometry) {
     }
   }
   if (is_linear) {
-    return rtc::Maybe<Point>();
+    return rtc::Optional<Point>();
   }
   const Point normal_direction =
       CrossProduct(first_pair_direction, pair_direction);
   for (; i < array_geometry.size(); ++i) {
     pair_direction = PairDirection(array_geometry[i - 1], array_geometry[i]);
     if (!ArePerpendicular(normal_direction, pair_direction)) {
-      return rtc::Maybe<Point>();
+      return rtc::Optional<Point>();
     }
   }
-  return rtc::Maybe<Point>(normal_direction);
+  return rtc::Optional<Point>(normal_direction);
 }
 
-rtc::Maybe<Point> GetArrayNormalIfExists(
+rtc::Optional<Point> GetArrayNormalIfExists(
     const std::vector<Point>& array_geometry) {
-  const rtc::Maybe<Point> direction = GetDirectionIfLinear(array_geometry);
+  const rtc::Optional<Point> direction = GetDirectionIfLinear(array_geometry);
   if (direction) {
-    return rtc::Maybe<Point>(Point(direction->y(), -direction->x(), 0.f));
+    return rtc::Optional<Point>(Point(direction->y(), -direction->x(), 0.f));
   }
-  const rtc::Maybe<Point> normal = GetNormalIfPlanar(array_geometry);
+  const rtc::Optional<Point> normal = GetNormalIfPlanar(array_geometry);
   if (normal && normal->z() < kMaxDotProduct) {
     return normal;
   }
-  return rtc::Maybe<Point>();
+  return rtc::Optional<Point>();
 }
 
 Point AzimuthToPoint(float azimuth) {

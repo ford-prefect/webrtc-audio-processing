@@ -21,14 +21,14 @@ namespace webrtc {
 
 void LappedTransform::BlockThunk::ProcessBlock(const float* const* input,
                                                size_t num_frames,
-                                               int num_input_channels,
-                                               int num_output_channels,
+                                               size_t num_input_channels,
+                                               size_t num_output_channels,
                                                float* const* output) {
   RTC_CHECK_EQ(num_input_channels, parent_->num_in_channels_);
   RTC_CHECK_EQ(num_output_channels, parent_->num_out_channels_);
   RTC_CHECK_EQ(parent_->block_length_, num_frames);
 
-  for (int i = 0; i < num_input_channels; ++i) {
+  for (size_t i = 0; i < num_input_channels; ++i) {
     memcpy(parent_->real_buf_.Row(i), input[i],
            num_frames * sizeof(*input[0]));
     parent_->fft_->Forward(parent_->real_buf_.Row(i),
@@ -44,7 +44,7 @@ void LappedTransform::BlockThunk::ProcessBlock(const float* const* input,
                                                num_output_channels,
                                                parent_->cplx_post_.Array());
 
-  for (int i = 0; i < num_output_channels; ++i) {
+  for (size_t i = 0; i < num_output_channels; ++i) {
     parent_->fft_->Inverse(parent_->cplx_post_.Row(i),
                            parent_->real_buf_.Row(i));
     memcpy(output[i], parent_->real_buf_.Row(i),
@@ -52,8 +52,8 @@ void LappedTransform::BlockThunk::ProcessBlock(const float* const* input,
   }
 }
 
-LappedTransform::LappedTransform(int num_in_channels,
-                                 int num_out_channels,
+LappedTransform::LappedTransform(size_t num_in_channels,
+                                 size_t num_out_channels,
                                  size_t chunk_length,
                                  const float* window,
                                  size_t block_length,
@@ -83,14 +83,16 @@ LappedTransform::LappedTransform(int num_in_channels,
       cplx_post_(num_out_channels,
                  cplx_length_,
                  RealFourier::kFftBufferAlignment) {
-  RTC_CHECK(num_in_channels_ > 0 && num_out_channels_ > 0);
-  RTC_CHECK_GT(block_length_, 0u);
-  RTC_CHECK_GT(chunk_length_, 0u);
+  RTC_CHECK(num_in_channels_ > 0);
+  RTC_CHECK_GT(block_length_, 0);
+  RTC_CHECK_GT(chunk_length_, 0);
   RTC_CHECK(block_processor_);
 
   // block_length_ power of 2?
-  RTC_CHECK_EQ(0u, block_length_ & (block_length_ - 1));
+  RTC_CHECK_EQ(0, block_length_ & (block_length_ - 1));
 }
+
+LappedTransform::~LappedTransform() = default;
 
 void LappedTransform::ProcessChunk(const float* const* in_chunk,
                                    float* const* out_chunk) {

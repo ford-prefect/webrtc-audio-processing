@@ -10,7 +10,6 @@
 
 #include "webrtc/modules/audio_processing/vad/pitch_based_vad.h"
 
-#include <assert.h>
 #include <math.h>
 #include <string.h>
 
@@ -18,7 +17,7 @@
 #include "webrtc/modules/audio_processing/vad/common.h"
 #include "webrtc/modules/audio_processing/vad/noise_gmm_tables.h"
 #include "webrtc/modules/audio_processing/vad/voice_gmm_tables.h"
-#include "webrtc/modules/interface/module_common_types.h"
+#include "webrtc/modules/include/module_common_types.h"
 
 namespace webrtc {
 

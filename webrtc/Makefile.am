@@ -1,7 +1,6 @@
-SUBDIRS = . base common_audio system_wrappers modules
+SUBDIRS = . api audio base common_audio system_wrappers modules
 
-noinst_HEADERS = common.h \
-		 common_types.h \
+noinst_HEADERS = common_types.h \
 		 typedefs.h
 
 noinst_LTLIBRARIES = libwebrtc.la

@@ -18,7 +18,7 @@ namespace webrtc {
 namespace {
 
 float BesselJ0(float x) {
-#if WEBRTC_WIN
+#ifdef WEBRTC_WIN
   return _j0(x);
 #else
   return j0(x);
@@ -43,8 +43,8 @@ void CovarianceMatrixGenerator::UniformCovarianceMatrix(
     float wave_number,
     const std::vector<Point>& geometry,
     ComplexMatrix<float>* mat) {
-  RTC_CHECK_EQ(static_cast<int>(geometry.size()), mat->num_rows());
-  RTC_CHECK_EQ(static_cast<int>(geometry.size()), mat->num_columns());
+  RTC_CHECK_EQ(geometry.size(), mat->num_rows());
+  RTC_CHECK_EQ(geometry.size(), mat->num_columns());
 
   complex<float>* const* mat_els = mat->elements();
   for (size_t i = 0; i < geometry.size(); ++i) {
@@ -68,8 +68,8 @@ void CovarianceMatrixGenerator::AngledCovarianceMatrix(
     int sample_rate,
     const std::vector<Point>& geometry,
     ComplexMatrix<float>* mat) {
-  RTC_CHECK_EQ(static_cast<int>(geometry.size()), mat->num_rows());
-  RTC_CHECK_EQ(static_cast<int>(geometry.size()), mat->num_columns());
+  RTC_CHECK_EQ(geometry.size(), mat->num_rows());
+  RTC_CHECK_EQ(geometry.size(), mat->num_columns());
 
   ComplexMatrix<float> interf_cov_vector(1, geometry.size());
   ComplexMatrix<float> interf_cov_vector_transposed(geometry.size(), 1);
@@ -95,7 +95,7 @@ void CovarianceMatrixGenerator::PhaseAlignmentMasks(
     float angle,
     ComplexMatrix<float>* mat) {
   RTC_CHECK_EQ(1, mat->num_rows());
-  RTC_CHECK_EQ(static_cast<int>(geometry.size()), mat->num_columns());
+  RTC_CHECK_EQ(geometry.size(), mat->num_columns());
 
   float freq_in_hertz =
       (static_cast<float>(frequency_bin) / fft_size) * sample_rate;

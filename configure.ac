@@ -135,12 +135,16 @@ AC_CONFIG_FILES([
 webrtc-audio-processing.pc
 Makefile
 webrtc/Makefile
+webrtc/api/Makefile
+webrtc/audio/Makefile
+webrtc/audio/utility/Makefile
 webrtc/base/Makefile
 webrtc/common_audio/Makefile
 webrtc/system_wrappers/Makefile
 webrtc/modules/Makefile
 webrtc/modules/audio_coding/Makefile
 webrtc/modules/audio_processing/Makefile
+webrtc/modules/video_coding/Makefile
 ])
 
 AC_OUTPUT

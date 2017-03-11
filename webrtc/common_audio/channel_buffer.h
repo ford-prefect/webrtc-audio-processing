@@ -13,12 +13,11 @@
 
 #include <string.h>
 
+#include <memory>
+
 #include "webrtc/base/checks.h"
-#include "webrtc/base/scoped_ptr.h"
+#include "webrtc/base/gtest_prod_util.h"
 #include "webrtc/common_audio/include/audio_util.h"
-#ifndef WEBRTC_AUDIO_PROCESSING_ONLY_BUILD
-#include "webrtc/test/testsupport/gtest_prod_util.h"
-#endif
 
 namespace webrtc {
 
@@ -42,20 +41,21 @@ template <typename T>
 class ChannelBuffer {
  public:
   ChannelBuffer(size_t num_frames,
-                int num_channels,
+                size_t num_channels,
                 size_t num_bands = 1)
       : data_(new T[num_frames * num_channels]()),
         channels_(new T*[num_channels * num_bands]),
         bands_(new T*[num_channels * num_bands]),
         num_frames_(num_frames),
         num_frames_per_band_(num_frames / num_bands),
+        num_allocated_channels_(num_channels),
         num_channels_(num_channels),
         num_bands_(num_bands) {
-    for (int i = 0; i < num_channels_; ++i) {
+    for (size_t i = 0; i < num_allocated_channels_; ++i) {
       for (size_t j = 0; j < num_bands_; ++j) {
-        channels_[j * num_channels_ + i] =
+        channels_[j * num_allocated_channels_ + i] =
             &data_[i * num_frames_ + j * num_frames_per_band_];
-        bands_[i * num_bands_ + j] = channels_[j * num_channels_ + i];
+        bands_[i * num_bands_ + j] = channels_[j * num_allocated_channels_ + i];
       }
     }
   }
@@ -64,7 +64,7 @@ class ChannelBuffer {
   // Usage:
   // channels()[channel][sample].
   // Where:
-  // 0 <= channel < |num_channels_|
+  // 0 <= channel < |num_allocated_channels_|
   // 0 <= sample < |num_frames_|
   T* const* channels() { return channels(0); }
   const T* const* channels() const { return channels(0); }
@@ -74,11 +74,11 @@ class ChannelBuffer {
   // channels(band)[channel][sample].
   // Where:
   // 0 <= band < |num_bands_|
-  // 0 <= channel < |num_channels_|
+  // 0 <= channel < |num_allocated_channels_|
   // 0 <= sample < |num_frames_per_band_|
   const T* const* channels(size_t band) const {
     RTC_DCHECK_LT(band, num_bands_);
-    return &channels_[band * num_channels_];
+    return &channels_[band * num_allocated_channels_];
   }
   T* const* channels(size_t band) {
     const ChannelBuffer<T>* t = this;
@@ -92,12 +92,12 @@ class ChannelBuffer {
   // 0 <= channel < |num_channels_|
   // 0 <= band < |num_bands_|
   // 0 <= sample < |num_frames_per_band_|
-  const T* const* bands(int channel) const {
+  const T* const* bands(size_t channel) const {
     RTC_DCHECK_LT(channel, num_channels_);
     RTC_DCHECK_GE(channel, 0);
     return &bands_[channel * num_bands_];
   }
-  T* const* bands(int channel) {
+  T* const* bands(size_t channel) {
     const ChannelBuffer<T>* t = this;
     return const_cast<T* const*>(t->bands(channel));
   }
@@ -106,7 +106,7 @@ class ChannelBuffer {
   // Returns |slice| for convenience.
   const T* const* Slice(T** slice, size_t start_frame) const {
     RTC_DCHECK_LT(start_frame, num_frames_);
-    for (int i = 0; i < num_channels_; ++i)
+    for (size_t i = 0; i < num_channels_; ++i)
       slice[i] = &channels_[i][start_frame];
     return slice;
   }
@@ -117,9 +117,14 @@ class ChannelBuffer {
 
   size_t num_frames() const { return num_frames_; }
   size_t num_frames_per_band() const { return num_frames_per_band_; }
-  int num_channels() const { return num_channels_; }
+  size_t num_channels() const { return num_channels_; }
   size_t num_bands() const { return num_bands_; }
-  size_t size() const {return num_frames_ * num_channels_; }
+  size_t size() const {return num_frames_ * num_allocated_channels_; }
+
+  void set_num_channels(size_t num_channels) {
+    RTC_DCHECK_LE(num_channels, num_allocated_channels_);
+    num_channels_ = num_channels;
+  }
 
   void SetDataForTesting(const T* data, size_t size) {
     RTC_CHECK_EQ(size, this->size());
@@ -127,12 +132,15 @@ class ChannelBuffer {
   }
 
  private:
-  rtc::scoped_ptr<T[]> data_;
-  rtc::scoped_ptr<T* []> channels_;
-  rtc::scoped_ptr<T* []> bands_;
+  std::unique_ptr<T[]> data_;
+  std::unique_ptr<T* []> channels_;
+  std::unique_ptr<T* []> bands_;
   const size_t num_frames_;
   const size_t num_frames_per_band_;
-  const int num_channels_;
+  // Number of channels the internal buffer holds.
+  const size_t num_allocated_channels_;
+  // Number of channels the user sees.
+  size_t num_channels_;
   const size_t num_bands_;
 };
 
@@ -144,7 +152,8 @@ class ChannelBuffer {
 // fbuf() until the next call to any of the other functions.
 class IFChannelBuffer {
  public:
-  IFChannelBuffer(size_t num_frames, int num_channels, size_t num_bands = 1);
+  IFChannelBuffer(size_t num_frames, size_t num_channels, size_t num_bands = 1);
+  ~IFChannelBuffer();
 
   ChannelBuffer<int16_t>* ibuf();
   ChannelBuffer<float>* fbuf();
@@ -153,7 +162,13 @@ class IFChannelBuffer {
 
   size_t num_frames() const { return ibuf_.num_frames(); }
   size_t num_frames_per_band() const { return ibuf_.num_frames_per_band(); }
-  int num_channels() const { return ibuf_.num_channels(); }
+  size_t num_channels() const {
+    return ivalid_ ? ibuf_.num_channels() : fbuf_.num_channels();
+  }
+  void set_num_channels(size_t num_channels) {
+    ibuf_.set_num_channels(num_channels);
+    fbuf_.set_num_channels(num_channels);
+  }
   size_t num_bands() const { return ibuf_.num_bands(); }
 
  private:

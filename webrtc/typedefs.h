@@ -24,6 +24,7 @@
 #define WEBRTC_ARCH_64_BITS
 #define WEBRTC_ARCH_LITTLE_ENDIAN
 #elif defined(__aarch64__)
+#define WEBRTC_ARCH_ARM_FAMILY
 #define WEBRTC_ARCH_64_BITS
 #define WEBRTC_ARCH_LITTLE_ENDIAN
 #elif defined(_M_IX86) || defined(__i386__)
@@ -32,17 +33,16 @@
 #define WEBRTC_ARCH_32_BITS
 #define WEBRTC_ARCH_LITTLE_ENDIAN
 #elif defined(__ARMEL__)
-// TODO(ajm): We'd prefer to control platform defines here, but this is
-// currently provided by the Android makefiles. Commented to avoid duplicate
-// definition warnings.
-//#define WEBRTC_ARCH_ARM
-// TODO(ajm): Chromium uses the following two defines. Should we switch?
-//#define WEBRTC_ARCH_ARM_FAMILY
-//#define WEBRTC_ARCH_ARMEL
+#define WEBRTC_ARCH_ARM_FAMILY
 #define WEBRTC_ARCH_32_BITS
 #define WEBRTC_ARCH_LITTLE_ENDIAN
 #elif defined(__MIPSEL__)
+#define WEBRTC_ARCH_MIPS_FAMILY
+#if defined(__LP64__)
+#define WEBRTC_ARCH_64_BITS
+#else
 #define WEBRTC_ARCH_32_BITS
+#endif
 #define WEBRTC_ARCH_LITTLE_ENDIAN
 #elif defined(__pnacl__)
 #define WEBRTC_ARCH_32_BITS
@@ -57,22 +57,21 @@
 
 // TODO(zhongwei.yao): WEBRTC_CPU_DETECTION is only used in one place; we should
 // probably just remove it.
-#if (defined(WEBRTC_ARCH_X86_FAMILY) && !defined(__SSE2__)) || \
-    defined(WEBRTC_DETECT_NEON)
+#if (defined(WEBRTC_ARCH_X86_FAMILY) && !defined(__SSE2__))
 #define WEBRTC_CPU_DETECTION
 #endif
 
-// TODO(pbos): Use webrtc/base/basictypes.h instead to include fixed-size ints.
 #include <stdint.h>
 
 // Annotate a function indicating the caller must examine the return value.
 // Use like:
 //   int foo() WARN_UNUSED_RESULT;
+// To explicitly ignore a result, see |ignore_result()| in <base/macros.h>.
 // TODO(ajm): Hack to avoid multiple definitions until the base/ of webrtc and
 // libjingle are merged.
 #if !defined(WARN_UNUSED_RESULT)
-#if defined(__GNUC__)
-#define WARN_UNUSED_RESULT __attribute__((warn_unused_result))
+#if defined(__GNUC__) || defined(__clang__)
+#define WARN_UNUSED_RESULT __attribute__ ((__warn_unused_result__))
 #else
 #define WARN_UNUSED_RESULT
 #endif
@@ -83,7 +82,7 @@
 //   assert(result == 17);
 #ifndef ATTRIBUTE_UNUSED
 #if defined(__GNUC__) || defined(__clang__)
-#define ATTRIBUTE_UNUSED __attribute__((unused))
+#define ATTRIBUTE_UNUSED __attribute__ ((__unused__))
 #else
 #define ATTRIBUTE_UNUSED
 #endif
@@ -99,13 +98,15 @@
 #endif
 #endif
 
+#ifndef NO_RETURN
 // Annotate a function that will not return control flow to the caller.
 #if defined(_MSC_VER)
 #define NO_RETURN __declspec(noreturn)
 #elif defined(__GNUC__)
-#define NO_RETURN __attribute__((noreturn))
+#define NO_RETURN __attribute__ ((__noreturn__))
 #else
 #define NO_RETURN
+#endif
 #endif
 
 #endif  // WEBRTC_TYPEDEFS_H_

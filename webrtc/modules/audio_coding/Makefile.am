@@ -39,7 +39,7 @@ libaudio_coding_la_SOURCES = codecs/isac/main/include/isac.h \
 			     codecs/isac/main/source/structs.h \
 			     codecs/isac/bandwidth_info.h
 
-libaudio_coding_la_CFLAGS = $(AM_CFLAGS) $(COMMON_CFLAGS)
+libaudio_coding_la_CFLAGS = $(AM_CFLAGS) $(COMMON_CFLAGS) -I$(top_srcdir)/webrtc/common_audio/signal_processing/include
 libaudio_coding_la_CXXFLAGS = $(AM_CXXFLAGS) $(COMMON_CXXFLAGS)
 
 EXTRA_DIST = BUILD.gn
