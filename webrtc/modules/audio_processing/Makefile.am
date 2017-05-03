@@ -33,6 +33,8 @@ libwebrtc_audio_processing_la_SOURCES = include/audio_processing.cc \
 					aec3/comfort_noise_generator.h \
 					aec3/decimator_by_4.cc \
 					aec3/decimator_by_4.h \
+					aec3/downsampled_render_buffer.cc \
+					aec3/downsampled_render_buffer.h \
 					aec3/echo_canceller3.cc \
 					aec3/echo_canceller3.h \
 					aec3/echo_path_delay_estimator.cc \
@@ -47,8 +49,6 @@ libwebrtc_audio_processing_la_SOURCES = include/audio_processing.cc \
 					aec3/erl_estimator.h \
 					aec3/erle_estimator.cc \
 					aec3/erle_estimator.h \
-					aec3/fft_buffer.cc \
-					aec3/fft_buffer.h \
 					aec3/fft_data.h \
 					aec3/frame_blocker.cc \
 					aec3/frame_blocker.h \
@@ -60,8 +60,8 @@ libwebrtc_audio_processing_la_SOURCES = include/audio_processing.cc \
 					aec3/matched_filter_lag_aggregator.h \
 					aec3/output_selector.cc \
 					aec3/output_selector.h \
-					aec3/power_echo_model.cc \
-					aec3/power_echo_model.h \
+					aec3/render_buffer.cc \
+					aec3/render_buffer.h \
 					aec3/render_delay_buffer.cc \
 					aec3/render_delay_buffer.h \
 					aec3/render_delay_controller.cc \
@@ -81,6 +81,7 @@ libwebrtc_audio_processing_la_SOURCES = include/audio_processing.cc \
 					aec3/suppression_filter.h \
 					aec3/suppression_gain.cc \
 					aec3/suppression_gain.h \
+					aec3/vector_math.h \
 					aecm/echo_control_mobile.cc \
 					aecm/echo_control_mobile.h \
 					aecm/aecm_core.cc \

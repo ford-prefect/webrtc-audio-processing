@@ -9,7 +9,6 @@ noinst_HEADERS = include/aligned_array.h \
 libsystem_wrappers_la_SOURCES = include/aligned_malloc.h \
 				include/cpu_features_wrapper.h \
 				include/file_wrapper.h \
-				include/logging.h \
 				include/metrics.h \
 				include/rw_lock_wrapper.h \
 				include/sleep.h \
@@ -21,7 +20,6 @@ libsystem_wrappers_la_SOURCES = include/aligned_malloc.h \
 				source/event_timer_posix.h \
 				source/event_timer_win.h \
 				source/file_impl.cc \
-				source/logging.cc \
 				source/metrics_default.cc \
 				source/metrics_default.h \
 				source/rw_lock.cc \
@@ -47,24 +45,12 @@ endif
 
 if HAVE_WIN
 libsystem_wrappers_la_SOURCES += include/fix_interlocked_exchange_pointer_win.h \
-				 source/critical_section_win.cc \
-				 source/condition_variable.cc \
-				 source/condition_variable_event_win.cc \
-				 source/condition_variable_event_win.h \
-				 source/condition_variable_native_win.cc \
-				 source/condition_variable_native_win.h \
 				 source/event_timer_win.cc \
 				 source/rw_lock_win.cc \
 				 source/rw_lock_win.cc \
 				 source/trace_win.cc
 else
 EXTRA_DIST += include/fix_interlocked_exchange_pointer_win.h \
-	      source/critical_section_win.cc \
-	      source/condition_variable.cc \
-	      source/condition_variable_event_win.cc \
-	      source/condition_variable_event_win.h \
-	      source/condition_variable_native_win.cc \
-	      source/condition_variable_native_win.h \
 	      source/event_timer_win.cc \
 	      source/rw_lock_generic.cc \
 	      source/rw_lock_win.cc \

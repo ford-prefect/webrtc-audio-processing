@@ -33,7 +33,6 @@ config("common_inherited_config") {
       "FEATURE_ENABLE_VOICEMAIL",
       "EXPAT_RELATIVE_PATH",
       "GTEST_RELATIVE_PATH",
-      "NO_MAIN_THREAD_WRAPPING",
       "NO_SOUND_SYSTEM",
       "WEBRTC_CHROMIUM_BUILD",
     ]
@@ -100,6 +99,12 @@ config("common_config") {
   cflags = []
   cflags_cc = []
   defines = []
+
+  if (rtc_enable_protobuf) {
+    defines += [ "WEBRTC_ENABLE_PROTOBUF=1" ]
+  } else {
+    defines += [ "WEBRTC_ENABLE_PROTOBUF=0" ]
+  }
 
   if (rtc_restrict_logging) {
     defines += [ "WEBRTC_RESTRICT_LOGGING" ]
@@ -219,6 +224,13 @@ config("common_objc") {
   libs = [ "Foundation.framework" ]
 }
 
+rtc_source_set("video_stream_api") {
+  sources = [
+    "video_receive_stream.h",
+    "video_send_stream.h",
+  ]
+}
+
 if (!build_with_chromium) {
   # Target to build all the WebRTC production code.
   rtc_static_library("webrtc") {
@@ -231,17 +243,7 @@ if (!build_with_chromium) {
       "call.h",
       "config.h",
     ]
-
-    # complete_static_lib doesn't work on Mac since libtool cannot support
-    # multiple objects with the same filenames (https://bugs.webrtc.org/6418).
-    if (is_win || is_linux || is_android) {
-      complete_static_lib = true
-    } else {
-      # TODO(kjellander): Remove this whenever possible. GN's static_library
-      # target type requires at least one object to avoid errors linking.
-      sources += [ "no_op_function.cc" ]
-    }
-
+    complete_static_lib = true
     defines = []
 
     deps = [
@@ -262,7 +264,7 @@ if (!build_with_chromium) {
       "pc",
       "sdk",
       "stats",
-      "system_wrappers",
+      "system_wrappers:system_wrappers_default",
       "video",
       "voice_engine",
     ]
@@ -287,7 +289,6 @@ if (!build_with_chromium) {
         ":video_engine_tests",
         ":webrtc_nonparallel_tests",
         ":webrtc_perf_tests",
-        "api:rtc_api_unittests",
         "base:rtc_base_tests_utils",
         "common_audio:common_audio_unittests",
         "common_video:common_video_unittests",
@@ -296,6 +297,7 @@ if (!build_with_chromium) {
         "modules:modules_unittests",
         "modules/audio_coding:audio_coding_tests",
         "modules/audio_processing:audio_processing_tests",
+        "modules/remote_bitrate_estimator:bwe_simulations_tests",
         "modules/rtp_rtcp:test_packet_masks_metrics",
         "modules/video_capture:video_capture_internal_impl",
         "modules/video_coding:plot_videoprocessor_integrationtest",
@@ -307,7 +309,6 @@ if (!build_with_chromium) {
         "test",
         "video:screenshare_loopback",
         "video:video_loopback",
-        "video:video_tests",
         "voice_engine:voice_engine_unittests",
       ]
       if (is_android) {
@@ -325,7 +326,10 @@ if (!build_with_chromium) {
         ]
       }
       if (rtc_enable_protobuf) {
-        deps += [ "logging:rtc_event_log2rtp_dump" ]
+        deps += [
+          "audio:low_bandwidth_audio_test",
+          "logging:rtc_event_log2rtp_dump",
+        ]
       }
     }
   }
@@ -476,7 +480,6 @@ if (rtc_include_tests) {
       "modules/remote_bitrate_estimator:remote_bitrate_estimator_perf_tests",
       "test:test_main",
       "video:video_full_stack_tests",
-      "video:video_quality_test",
     ]
 
     data = webrtc_perf_tests_resources

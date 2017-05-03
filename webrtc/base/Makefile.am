@@ -9,6 +9,7 @@ noinst_HEADERS = array_view.h \
 		 function_view.h \
 		 gtest_prod_util.h \
 		 ignore_wundef.h \
+		 protobuf_utils.h \
 		 safe_conversions.h \
 		 safe_conversions_impl.h \
 		 sanitizer.h \

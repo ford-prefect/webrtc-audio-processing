@@ -79,8 +79,23 @@ if (!rtc_build_ssl) {
   }
 }
 
+source_set("protobuf_utils") {
+  sources = [
+    "protobuf_utils.h",
+  ]
+  if (rtc_enable_protobuf) {
+    public_deps = [
+      "//third_party/protobuf:protobuf_lite",
+    ]
+  }
+}
+
 # The subset of rtc_base approved for use outside of libjingle.
 rtc_static_library("rtc_base_approved") {
+  # TODO(kjellander): Remove (bugs.webrtc.org/7480)
+  # Enabling GN check triggers a cyclic dependency caused by rate_limiter.cc:
+  #   :rtc_base_approved -> //webrtc/system_wrappers -> :rtc_base_approved
+  check_includes = false
   defines = []
   libs = []
   deps = []
@@ -125,8 +140,6 @@ rtc_static_library("rtc_base_approved") {
     "location.h",
     "md5.cc",
     "md5.h",
-    "md5digest.cc",
-    "md5digest.h",
     "mod_ops.h",
     "onetimeevent.h",
     "optional.cc",
@@ -138,6 +151,7 @@ rtc_static_library("rtc_base_approved") {
     "platform_thread.cc",
     "platform_thread.h",
     "platform_thread_types.h",
+    "ptr_util.h",
     "race_checker.cc",
     "race_checker.h",
     "random.cc",
@@ -153,10 +167,14 @@ rtc_static_library("rtc_base_approved") {
     "safe_compare.h",
     "safe_conversions.h",
     "safe_conversions_impl.h",
+    "safe_minmax.h",
     "sanitizer.h",
     "scoped_ref_ptr.h",
+    "string_to_number.cc",
+    "string_to_number.h",
     "stringencode.cc",
     "stringencode.h",
+    "stringize_macros.h",
     "stringutils.cc",
     "stringutils.h",
     "swap_queue.h",
@@ -271,6 +289,9 @@ rtc_static_library("rtc_base_approved") {
       }
     }
   }
+  if (is_nacl) {
+    deps += [ "//native_client_sdk/src/libraries/nacl_io" ]
+  }
 }
 
 config("enable_libevent_config") {
@@ -348,17 +369,23 @@ config("rtc_base_warnings_config") {
   }
 }
 
-# TODO(nisse): This target is temporarily split out, to aid moving the
-# code over to Chrome. It should be deleted from webrtc soon.
-rtc_static_library("rtc_task_runner") {
+rtc_source_set("rtc_json") {
+  defines = []
   sources = [
-    "task.cc",
-    "task.h",
-    "taskparent.cc",
-    "taskparent.h",
-    "taskrunner.cc",
-    "taskrunner.h",
+    "json.cc",
+    "json.h",
   ]
+  if (rtc_build_json) {
+    public_deps = [
+      "//third_party/jsoncpp",
+    ]
+  } else {
+    include_dirs = [ "$rtc_jsoncpp_root" ]
+
+    # When defined changes the include path for json.h to where it is
+    # expected to be when building json outside of the standalone build.
+    defines += [ "WEBRTC_EXTERNAL_JSON" ]
+  }
 }
 
 rtc_static_library("rtc_base") {
@@ -402,6 +429,11 @@ rtc_static_library("rtc_base") {
     "gunit_prod.h",
     "helpers.cc",
     "helpers.h",
+    "httpbase.cc",
+    "httpbase.h",
+    "httpcommon-inl.h",
+    "httpcommon.cc",
+    "httpcommon.h",
     "ipaddress.cc",
     "ipaddress.h",
     "messagedigest.cc",
@@ -429,6 +461,7 @@ rtc_static_library("rtc_base") {
     "opensslstreamadapter.h",
     "physicalsocketserver.cc",
     "physicalsocketserver.h",
+    "proxyinfo.cc",
     "proxyinfo.h",
     "ratelimiter.cc",
     "ratelimiter.h",
@@ -490,15 +523,12 @@ rtc_static_library("rtc_base") {
     configs += [ ":rtc_base_warnings_config" ]
     sources += [
       "callback.h",
-      "json.cc",
-      "json.h",
       "logsinks.cc",
       "logsinks.h",
       "mathutils.h",
       "optionsfile.cc",
       "optionsfile.h",
       "rollingaccumulator.h",
-      "scopedptrcollection.h",
       "sslroots.h",
       "testbase64.h",
       "testclient.cc",
@@ -517,16 +547,6 @@ rtc_static_library("rtc_base") {
         "win32socketserver.cc",
         "win32socketserver.h",
       ]
-    }
-
-    if (rtc_build_json) {
-      deps += [ "//third_party/jsoncpp" ]
-    } else {
-      include_dirs = [ "$rtc_jsoncpp_root" ]
-
-      # When defined changes the include path for json.h to where it is
-      # expected to be when building json outside of the standalone build.
-      defines += [ "WEBRTC_EXTERNAL_JSON" ]
     }
   }  # !build_with_chromium
 
@@ -550,11 +570,8 @@ rtc_static_library("rtc_base") {
 
   if (is_ios || is_mac) {
     sources += [
-      "maccocoathreadhelper.h",
-      "maccocoathreadhelper.mm",
       "macifaddrs_converter.cc",
-      "scoped_autorelease_pool.h",
-      "scoped_autorelease_pool.mm",
+      "thread_darwin.mm",
     ]
   }
 
@@ -641,21 +658,74 @@ rtc_source_set("gtest_prod") {
   ]
 }
 
+config("rtc_base_tests_utils_exported_config") {
+  defines = [ "GTEST_RELATIVE_PATH" ]
+}
+
+config("rtc_base_tests_utils_warnings_config") {
+  if (is_win && is_clang) {
+    cflags = [
+      # See https://bugs.chromium.org/p/webrtc/issues/detail?id=6270
+      "-Wno-reorder",
+      "-Wno-sign-compare",
+    ]
+  }
+}
+
+rtc_source_set("rtc_base_tests_utils") {
+  testonly = true
+  sources = [
+    # Also use this as a convenient dumping ground for misc files that are
+    # included by multiple targets below.
+    "cpu_time.cc",
+    "cpu_time.h",
+    "fakeclock.cc",
+    "fakeclock.h",
+    "fakenetwork.h",
+    "fakesslidentity.h",
+    "firewallsocketserver.cc",
+    "firewallsocketserver.h",
+    "gunit.h",
+    "httpserver.cc",
+    "httpserver.h",
+    "md5digest.cc",
+    "md5digest.h",
+    "memory_usage.cc",
+    "memory_usage.h",
+    "natserver.cc",
+    "natserver.h",
+    "natsocketfactory.cc",
+    "natsocketfactory.h",
+    "nattypes.cc",
+    "nattypes.h",
+    "proxyserver.cc",
+    "proxyserver.h",
+    "sigslottester.h",
+    "sigslottester.h.pump",
+    "testbase64.h",
+    "testechoserver.h",
+    "testutils.h",
+    "timedelta.h",
+  ]
+  configs += [ ":rtc_base_tests_utils_warnings_config" ]
+  public_configs = [ ":rtc_base_tests_utils_exported_config" ]
+  deps = [
+    ":rtc_base",
+    "../test:field_trial",
+    "../test:test_support",
+  ]
+  public_deps = [
+    "//testing/gmock",
+    "//testing/gtest",
+  ]
+
+  if (!build_with_chromium && is_clang) {
+    # Suppress warnings from the Chromium Clang plugin (bugs.webrtc.org/163).
+    suppressed_configs += [ "//build/config/clang:find_bad_constructs" ]
+  }
+}
+
 if (rtc_include_tests) {
-  config("rtc_base_tests_utils_exported_config") {
-    defines = [ "GTEST_RELATIVE_PATH" ]
-  }
-
-  config("rtc_base_tests_utils_warnings_config") {
-    if (is_win && is_clang) {
-      cflags = [
-        # See https://bugs.chromium.org/p/webrtc/issues/detail?id=6270
-        "-Wno-reorder",
-        "-Wno-sign-compare",
-      ]
-    }
-  }
-
   rtc_source_set("rtc_base_tests_main") {
     testonly = true
     sources = [
@@ -663,54 +733,9 @@ if (rtc_include_tests) {
     ]
     public_configs = [ ":rtc_base_tests_utils_exported_config" ]
     deps = [
-      ":rtc_base_tests_utils",
-    ]
-    public_deps = [
-      "//testing/gmock",
-      "//testing/gtest",
-    ]
-
-    if (!build_with_chromium && is_clang) {
-      # Suppress warnings from the Chromium Clang plugin (bugs.webrtc.org/163).
-      suppressed_configs += [ "//build/config/clang:find_bad_constructs" ]
-    }
-  }
-
-  rtc_source_set("rtc_base_tests_utils") {
-    testonly = true
-    sources = [
-      # Also use this as a convenient dumping ground for misc files that are
-      # included by multiple targets below.
-      "cpu_time.cc",
-      "cpu_time.h",
-      "fakeclock.cc",
-      "fakeclock.h",
-      "fakenetwork.h",
-      "fakesslidentity.h",
-      "firewallsocketserver.cc",
-      "firewallsocketserver.h",
-      "gunit.h",
-      "memory_usage.cc",
-      "memory_usage.h",
-      "natserver.cc",
-      "natserver.h",
-      "natsocketfactory.cc",
-      "natsocketfactory.h",
-      "nattypes.cc",
-      "nattypes.h",
-      "proxyserver.cc",
-      "proxyserver.h",
-      "sigslottester.h",
-      "sigslottester.h.pump",
-      "testbase64.h",
-      "testechoserver.h",
-      "testutils.h",
-      "timedelta.h",
-    ]
-    configs += [ ":rtc_base_tests_utils_warnings_config" ]
-    public_configs = [ ":rtc_base_tests_utils_exported_config" ]
-    deps = [
       ":rtc_base",
+      ":rtc_base_approved",
+      ":rtc_base_tests_utils",
       "../test:field_trial",
       "../test:test_support",
     ]
@@ -727,6 +752,13 @@ if (rtc_include_tests) {
 
   rtc_source_set("rtc_base_nonparallel_tests") {
     testonly = true
+
+    # Skip restricting visibility on mobile platforms since the tests on those
+    # gets additional generated targets which would require many lines here to
+    # cover (which would be confusing to read and hard to maintain).
+    if (!is_android && !is_ios) {
+      visibility = [ "//webrtc:webrtc_nonparallel_tests" ]
+    }
     sources = [
       "cpu_time_unittest.cc",
       "filerotatingstream_unittest.cc",
@@ -740,6 +772,9 @@ if (rtc_include_tests) {
     deps = [
       ":rtc_base",
       ":rtc_base_tests_main",
+      ":rtc_base_tests_utils",
+      "../system_wrappers:system_wrappers",
+      "../test:test_support",
       "//testing/gtest",
     ]
     if (is_win) {
@@ -754,6 +789,13 @@ if (rtc_include_tests) {
 
   rtc_source_set("rtc_base_approved_unittests") {
     testonly = true
+
+    # Skip restricting visibility on mobile platforms since the tests on those
+    # gets additional generated targets which would require many lines here to
+    # cover (which would be confusing to read and hard to maintain).
+    if (!is_android && !is_ios) {
+      visibility = [ "//webrtc:rtc_unittests" ]
+    }
     sources = [
       "array_view_unittest.cc",
       "atomicops_unittest.cc",
@@ -784,7 +826,10 @@ if (rtc_include_tests) {
       "ratetracker_unittest.cc",
       "refcountedobject_unittest.cc",
       "safe_compare_unittest.cc",
+      "safe_minmax_unittest.cc",
+      "string_to_number_unittest.cc",
       "stringencode_unittest.cc",
+      "stringize_macros_unittest.cc",
       "stringutils_unittest.cc",
       "swap_queue_unittest.cc",
       "thread_annotations_unittest.cc",
@@ -793,8 +838,13 @@ if (rtc_include_tests) {
       "timeutils_unittest.cc",
     ]
     deps = [
+      ":rtc_base",
       ":rtc_base_approved",
       ":rtc_base_tests_main",
+      ":rtc_base_tests_utils",
+      ":rtc_task_queue",
+      "../system_wrappers:system_wrappers",
+      "../test:test_support",
     ]
     if (!build_with_chromium && is_clang) {
       # Suppress warnings from the Chromium Clang plugin (bugs.webrtc.org/163).
@@ -804,6 +854,13 @@ if (rtc_include_tests) {
 
   rtc_source_set("rtc_task_queue_unittests") {
     testonly = true
+
+    # Skip restricting visibility on mobile platforms since the tests on those
+    # gets additional generated targets which would require many lines here to
+    # cover (which would be confusing to read and hard to maintain).
+    if (!is_android && !is_ios) {
+      visibility = [ "//webrtc:rtc_unittests" ]
+    }
     sources = [
       "sequenced_task_checker_unittest.cc",
       "task_queue_unittest.cc",
@@ -811,7 +868,9 @@ if (rtc_include_tests) {
     ]
     deps = [
       ":rtc_base_tests_main",
+      ":rtc_base_tests_utils",
       ":rtc_task_queue",
+      "../test:test_support",
     ]
     if (!build_with_chromium && is_clang) {
       # Suppress warnings from the Chromium Clang plugin (bugs.webrtc.org/163).
@@ -821,13 +880,22 @@ if (rtc_include_tests) {
 
   rtc_source_set("rtc_numerics_unittests") {
     testonly = true
+
+    # Skip restricting visibility on mobile platforms since the tests on those
+    # gets additional generated targets which would require many lines here to
+    # cover (which would be confusing to read and hard to maintain).
+    if (!is_android && !is_ios) {
+      visibility = [ "//webrtc:rtc_unittests" ]
+    }
     sources = [
       "numerics/exp_filter_unittest.cc",
       "numerics/percentile_filter_unittest.cc",
     ]
     deps = [
+      ":rtc_base_approved",
       ":rtc_base_tests_main",
       ":rtc_numerics",
+      "../test:test_support",
     ]
   }
 
@@ -838,11 +906,21 @@ if (rtc_include_tests) {
   }
   rtc_source_set("rtc_base_unittests") {
     testonly = true
+
+    # Skip restricting visibility on mobile platforms since the tests on those
+    # gets additional generated targets which would require many lines here to
+    # cover (which would be confusing to read and hard to maintain).
+    if (!is_android && !is_ios) {
+      visibility = [ "//webrtc:rtc_unittests" ]
+    }
     sources = [
       "callback_unittest.cc",
       "crc32_unittest.cc",
       "fileutils_unittest.cc",
       "helpers_unittest.cc",
+      "httpbase_unittest.cc",
+      "httpcommon_unittest.cc",
+      "httpserver_unittest.cc",
       "ipaddress_unittest.cc",
       "memory_usage_unittest.cc",
       "messagedigest_unittest.cc",
@@ -850,18 +928,18 @@ if (rtc_include_tests) {
       "nat_unittest.cc",
       "network_unittest.cc",
       "optionsfile_unittest.cc",
+      "proxy_unittest.cc",
+      "ptr_util_unittest.cc",
       "ratelimiter_unittest.cc",
       "rollingaccumulator_unittest.cc",
       "rtccertificate_unittest.cc",
       "rtccertificategenerator_unittest.cc",
-      "scopedptrcollection_unittest.cc",
       "sha1digest_unittest.cc",
       "sharedexclusivelock_unittest.cc",
       "signalthread_unittest.cc",
       "sigslot_unittest.cc",
       "sigslottester_unittest.cc",
       "stream_unittest.cc",
-      "task_unittest.cc",
       "testclient_unittest.cc",
       "thread_unittest.cc",
     ]
@@ -883,7 +961,8 @@ if (rtc_include_tests) {
     }
     deps = [
       ":rtc_base_tests_main",
-      ":rtc_task_runner",
+      ":rtc_base_tests_utils",
+      "../test:test_support",
     ]
     public_deps = [
       ":rtc_base",
