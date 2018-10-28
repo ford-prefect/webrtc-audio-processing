@@ -21,24 +21,25 @@ if ['darwin', 'ios'].contains(host_system)
   if host_system == 'ios'
     os_cflags += ['-DWEBRTC_IOS']
   endif
-  platform_cflags += ['-D WEBRTC_POSIX']
   have_posix = true
 elif host_system == 'android'
   os_cflags += ['-DWEBRTC_ANDROID', '-DWEBRTC_LINUX', '-DWEBRTC_THREAD_RR', '-DWEBRTC_CLOCK_TYPE_REALTIME']
   os_deps += [cc.find_library('log')]
   os_deps += [dependency('gnustl', required : get_option('gnustl'))]
-  platform_cflags += ['-DWEBRTC_POSIX']
   have_posix = true
 elif host_system == 'linux'
   os_cflags += ['-DWEBRTC_LINUX', '-DWEBRTC_THREAD_RR']
   os_deps += [cc.find_library('rt', required : false)]
   os_deps += [dependency('threads')]
-  platform_cflags += ['-DWEBRTC_POSIX']
   have_posix = true
 elif host_system == 'windows'
   platform_cflags += ['-DWEBRTC_WIN', '-D_WIN32', '-U__STRICT_ANSI__']
   os_deps += [cc.find_library('winmm')]
   have_win = true
+endif
+
+if have_posix
+  platform_cflags += ['-DWEBRTC_POSIX']
 endif
 
 arch_cflags = []
