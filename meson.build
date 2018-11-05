@@ -47,21 +47,25 @@ have_arm = false
 have_armv7 = false
 have_neon = false
 have_x86 = false
-if ['arm', 'armv7', 'aarch64'].contains(host_machine.cpu_family())
-  have_arm = true
-  arch_cflags = ['-DWEBRTC_ARCH_ARM']
+if ['arm', 'armv7'].contains(host_machine.cpu_family())
+  if cc.compiles('''#ifdef __ARM_ARCH_ISA_ARM
+#error no arm arch
+#endif''')
+    have_arm = true
+    arch_cflags += ['-DWEBRTC_ARCH_ARM']
+  endif
   if cc.compiles('''#ifndef __ARM_ARCH_7A__
 #error no armv7 arch
 #endif''')
     have_armv7 = true
-    arch_cflags = ['-DWEBRTC_ARCH_ARM_V7']
+    arch_cflags += ['-DWEBRTC_ARCH_ARM_V7']
   endif
-  if cc.compiles('''#ifndef __aarch64__
+endif
+if cc.compiles('''#ifndef __aarch64__
 #error no aarch64 arch
 #endif''')
-    have_neon = true
-    arch_cflags = ['-DWEBRTC_ARCH_ARM64', '-DWEBRTC_HAS_NEON']
-  endif
+  have_neon = true
+  arch_cflags += ['-DWEBRTC_ARCH_ARM64', '-DWEBRTC_HAS_NEON']
 endif
 if ['x86', 'x86_64'].contains(host_machine.cpu_family())
   have_x86 = true
