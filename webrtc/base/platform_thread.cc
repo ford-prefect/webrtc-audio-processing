@@ -17,6 +17,8 @@
 #if defined(WEBRTC_LINUX)
 #include <sys/prctl.h>
 #include <sys/syscall.h>
+#elif defined(WEBRTC_GNU)
+#include <sys/syscall.h>
 #endif
 
 namespace rtc {
@@ -32,6 +34,8 @@ PlatformThreadId CurrentThreadId() {
   ret =  syscall(__NR_gettid);
 #elif defined(WEBRTC_ANDROID)
   ret = gettid();
+#elif defined(WEBRTC_GNU)
+  ret = pthread_self();
 #else
   // Default implementation for nacl and solaris.
   ret = reinterpret_cast<pid_t>(pthread_self());

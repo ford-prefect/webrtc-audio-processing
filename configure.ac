@@ -63,6 +63,12 @@ AS_CASE(["${host}"],
          OS_LDFLAGS="-lrt -lpthread"
          HAVE_POSIX=1
         ],
+    [*-k*bsd-gnu* | *-*gnu*],
+        [
+         OS_CFLAGS="-DWEBRTC_GNU"
+         PLATFORM_CFLAGS="-DWEBRTC_POSIX"
+         HAVE_POSIX=1
+        ],
     [*-*darwin*],
         [
          OS_CFLAGS="-DWEBRTC_MAC -DWEBRTC_THREAD_RR -DWEBRTC_CLOCK_TYPE_REALTIME"
