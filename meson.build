@@ -1,6 +1,6 @@
 project('webrtc-audio-processing', 'c', 'cpp',
   version : '0.3.1',
-  meson_version : '>= 0.47',
+  meson_version : '>= 0.52',
   default_options : [ 'warning_level=1',
                       'buildtype=debugoptimized' ])
 
@@ -109,7 +109,5 @@ pkgconfig.generate(
     extra_cflags: [
       '-DWEBRTC_AUDIO_PROCESSING_ONLY_BUILD',
     ] + platform_cflags,
-    # XXX: passing the libwebrtc_audio_processing object result in adding not-installed libraries to Libs.private
-    libraries: '-lwebrtc_audio_processing',
-    libraries_private: common_deps,
+    libraries: libwebrtc_audio_processing,
 )
