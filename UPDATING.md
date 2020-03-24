@@ -29,7 +29,7 @@ project source code.
      system upstreama.
 
    * Arch-specific files usually have special handling in the corresponding
-     Makefile.am.
+     meson.build.
 
 4. Once everything has been copied and updated, everything needs to be built.
    Missing dependencies (files that were not copied, or new modules that are
@@ -43,20 +43,19 @@ project source code.
 
    * The current policy is that we mirror upstream API as-is.
 
-   * Update configure.ac with the appropriate version info  based on how the
+   * Update soversion in meson.build with the appropriate version info  based on how the
      code has changed. Details on how to do this are included in the
      [libtool documentation][libtool-version-info].
 
 5. Build PulseAudio (and/or any other dependent projects) against the new code.
    The easy way to do this is via a prefixed install.
 
-   * Run ```configure``` webrtc-audio-processing with
-     ```--prefix=/some/local/path```, then do a ```make``` and
-     ```make install```.
+   * Configure webrtc-audio-processing with
+     ```meson build -D prefix=$(pwd)/install```, then do a ```ninja -C build/ install```
 
-   * Run ```configure``` on PulseAudio with
-     ```PKG_CONFIG_PATH=/some/local/path/lib/pkgconfig```, which will cause the
-     build to pick up the prefixed install. Then do a ```make```, run the built
+   * Configure PulseAudio with
+     ```meson build -D pkg_config_path=/path/to/webrtc-audio-processing/install/lib64/pkgconfig/```, which will cause the
+     build to pick up the prefixed install. Then do a ```ninja -C build```, run the built
      PulseAudio, and load ```module-echo-cancel``` to make sure it loads fine.
 
    * Run some test streams through the canceller to make sure it is working
