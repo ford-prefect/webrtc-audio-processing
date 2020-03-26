@@ -111,3 +111,15 @@ pkgconfig.generate(
     ] + platform_cflags,
     libraries: libwebrtc_audio_processing,
 )
+
+pkgconfig.generate(
+    name: 'webrtc-audio-coding',
+    description: 'WebRTC Audio Coding library',
+    version: meson.project_version(),
+    filebase: 'webrtc-audio-coding',
+    subdirs: 'webrtc_audio_processing',
+    extra_cflags: [
+      '-DWEBRTC_AUDIO_PROCESSING_ONLY_BUILD',
+    ] + platform_cflags,
+    libraries: libwebrtc_audio_coding,
+)

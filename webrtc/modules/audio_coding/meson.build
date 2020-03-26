@@ -1,4 +1,4 @@
-audio_coding_sources = [
+webrtc_audio_coding_sources = [
   'codecs/isac/main/source/arith_routines.c',
   'codecs/isac/main/source/arith_routines_hist.c',
   'codecs/isac/main/source/arith_routines_logist.c',
@@ -18,16 +18,45 @@ audio_coding_sources = [
   'codecs/isac/main/source/pitch_gain_tables.c',
   'codecs/isac/main/source/pitch_lag_tables.c',
   'codecs/isac/main/source/spectrum_ar_model_tables.c',
+  'codecs/audio_decoder.cc',
+  'codecs/audio_encoder.cc',
+  'codecs/isac/main/source/audio_decoder_isac.cc',
+  'codecs/isac/main/source/audio_encoder_isac.cc',
+  'codecs/isac/main/source/bandwidth_estimator.c',
+  'codecs/isac/main/source/crc.c',
+  'codecs/isac/main/source/decode.c',
+  'codecs/isac/main/source/decode_bwe.c',
+  'codecs/isac/main/source/encode.c',
+  'codecs/isac/main/source/fft.c',
+  'codecs/isac/main/source/isac.c',
+  'codecs/isac/main/source/lattice.c',
+  'codecs/isac/main/source/transform.c',
 ]
 
-libaudio_coding = static_library('audio_coding',
-    audio_coding_sources,
-    dependencies: common_deps,
+libwebrtc_audio_coding = library('webrtc_audio_coding',
+    webrtc_audio_coding_sources,
+    dependencies: [base_dep, common_audio_dep] + common_deps,
     include_directories: webrtc_inc,
     c_args: common_cflags,
-    cpp_args: common_cxxflags
+    cpp_args: common_cxxflags,
+    soversion: soversion,
+    install: true
 )
 
-audio_coding_dep = declare_dependency(
-    link_with: libaudio_coding
+webrtc_audio_coding_dep = declare_dependency(
+    link_with: libwebrtc_audio_coding,
+    include_directories: webrtc_inc,
+    version: meson.project_version()
+)
+
+install_headers(['codecs/isac/bandwidth_info.h'],
+    subdir: 'webrtc_audio_processing/webrtc/modules/audio_coding/codecs/isac'
+)
+
+install_headers(['codecs/isac/main/source/settings.h'],
+    subdir: 'webrtc_audio_processing/webrtc/modules/audio_coding/codecs/isac/main/source'
+)
+
+install_headers(['codecs/isac/main/include/isac.h'],
+    subdir: 'webrtc_audio_processing/webrtc/modules/audio_coding/codecs/isac/main/include'
 )
