@@ -1,12 +1,17 @@
 project('webrtc-audio-processing', 'c', 'cpp',
-  version : '0.3.1',
+  version : '0.4.0',
   meson_version : '>= 0.52',
   default_options : [ 'warning_level=1',
-                      'buildtype=debugoptimized' ])
+                      'buildtype=debugoptimized',
+                      'c_std=c11',
+                      'cpp_std=c++14',
+                    ]
+)
 
 soversion = 0
 
 cc = meson.get_compiler('c')
+cpp = meson.get_compiler('cpp')
 
 host_system = host_machine.system()
 
@@ -16,14 +21,28 @@ os_deps = []
 have_posix = false
 have_win = false
 
+absl_dep = [
+  cpp.find_library('absl_base'),
+  cpp.find_library('absl_bad_optional_access'),
+  cpp.find_library('absl_flags_internal'),
+  cpp.find_library('absl_flags_marshalling'),
+  cpp.find_library('absl_flags_parse'),
+  cpp.find_library('absl_flags_registry'),
+  cpp.find_library('absl_flags_usage_internal'),
+  cpp.find_library('absl_raw_logging_internal'),
+  cpp.find_library('absl_strings'),
+  cpp.find_library('absl_synchronization'),
+  cpp.find_library('absl_throw_delegate'),
+]
+
 if ['darwin', 'ios'].contains(host_system)
-  os_cflags = ['-DWEBRTC_MAC', '-DWEBRTC_THREAD_RR', '-DWEBRTC_CLOCK_TYPE_REALTIME']
+  os_cflags = ['-DWEBRTC_MAC']
   if host_system == 'ios'
     os_cflags += ['-DWEBRTC_IOS']
   endif
   have_posix = true
 elif host_system == 'android'
-  os_cflags += ['-DWEBRTC_ANDROID', '-DWEBRTC_LINUX', '-DWEBRTC_THREAD_RR', '-DWEBRTC_CLOCK_TYPE_REALTIME']
+  os_cflags += ['-DWEBRTC_ANDROID', '-DWEBRTC_LINUX']
   os_deps += [cc.find_library('log')]
   os_deps += [dependency('gnustl', required : get_option('gnustl'))]
   have_posix = true
@@ -42,6 +61,7 @@ if have_posix
   platform_cflags += ['-DWEBRTC_POSIX']
 endif
 
+# FIXME: add WEBRTC_ENABLE_AVX2 support
 arch_cflags = []
 have_arm = false
 have_armv7 = false
@@ -84,16 +104,14 @@ if neon_opt != 'no'
   endif
 endif
 
-noise_cflags = []
-if get_option('ns_mode') == 'float'
-  noise_cflags += ['-DWEBRTC_NS_FLOAT=1']
-else
-  noise_cflags += ['-DWEBRTC_NS_FIXED=1']
-endif
-
-common_cflags = ['-DWEBRTC_AUDIO_PROCESSING_ONLY_BUILD', '-DNDEBUG'] + platform_cflags + os_cflags + arch_cflags + noise_cflags
-common_cxxflags = ['-std=c++11'] + common_cflags
-common_deps = os_deps
+common_cflags = [
+  '-DWEBRTC_LIBRARY_IMPL',
+  '-DWEBRTC_ENABLE_SYMBOL_EXPORT',
+  '-DWEBRTC_AUDIO_PROCESSING_ONLY_BUILD',
+  '-DNDEBUG'
+  ] + platform_cflags + os_cflags + arch_cflags
+common_cxxflags = common_cflags
+common_deps = os_deps + [absl_dep]
 webrtc_inc = include_directories('.')
 
 subdir('webrtc')
